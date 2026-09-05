@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard | TechTitans</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<header>
+
+    <div class="logo">
+        TechTitans
+    </div>
+
+    <nav>
+        <a href="/">Home</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+</header>
+
+
+<main>
+
+    <section class="admin-container">
+
+        <h1>Admin Dashboard</h1>
+
+        <p class="subtitle">
+            Manage and monitor instrument verification records.
+        </p>
+
+
+        <!-- DASHBOARD STATS -->
+
+        <div class="dashboard-stats">
+
+            <div class="stat-card">
+
+                <span class="stat-label">
+                    Total Records
+                </span>
+
+                <strong>
+                    {{ total_records }}
+                </strong>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <span class="stat-label">
+                    Verified
+                </span>
+
+                <strong>
+                    {{ verified_count }}
+                </strong>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <span class="stat-label">
+                    Pending
+                </span>
+
+                <strong>
+                    {{ pending_count }}
+                </strong>
+
+            </div>
+
+
+            <div class="stat-card">
+
+                <span class="stat-label">
+                    Rejected
+                </span>
+
+                <strong>
+                    {{ rejected_count }}
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <!-- ADD INSTRUMENT -->
+
+        <div class="admin-card">
+
+            <h2>
+                Add New Instrument
+            </h2>
+
+            <form action="/add" method="POST">
+
+                <div class="form-group">
+
+                    <label for="certificate_id">
+                        Certificate ID
+                    </label>
+
+                    <input
+                        id="certificate_id"
+                        type="text"
+                        name="certificate_id"
+                        placeholder="Example: TEST006"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="instrument_name">
+                        Instrument Name
+                    </label>
+
+                    <input
+                        id="instrument_name"
+                        type="text"
+                        name="instrument_name"
+                        placeholder="Example: Digital Weighing Machine"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="owner_name">
+                        Owner Name
+                    </label>
+
+                    <input
+                        id="owner_name"
+                        type="text"
+                        name="owner_name"
+                        placeholder="Example: ABC Traders"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="status">
+                        Status
+                    </label>
+
+                    <select
+                        name="status"
+                        id="status"
+                        required
+                    >
+
+                        <option value="Verified">
+                            Verified
+                        </option>
+
+                        <option value="Pending">
+                            Pending
+                        </option>
+
+                        <option value="Rejected">
+                            Rejected
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <button type="submit">
+                    Add Instrument
+                </button>
+
+            </form>
+
+        </div>
+
+
+        <!-- RECORDS -->
+
+        <div class="admin-card">
+
+            <h2>
+                Instrument Records
+            </h2>
+            <!-- SEARCH & FILTER -->
+
+<form action="/admin" method="GET" class="search-filter">
+
+    <div class="search-box">
+
+        <label for="search">
+            Search Records
+        </label>
+
+        <input
+            type="text"
+            id="search"
+            name="search"
+            value="{{ search }}"
+            placeholder="Certificate ID, Instrument or Owner"
+        >
+
+    </div>
+
+
+    <div class="filter-box">
+
+        <label for="status">
+            Status
+        </label>
+
+        <select name="status" id="status">
+
+            <option value="">
+                All Status
+            </option>
+
+            <option value="Verified"
+                {% if status_filter == "Verified" %}selected{% endif %}>
+                Verified
+            </option>
+
+            <option value="Pending"
+                {% if status_filter == "Pending" %}selected{% endif %}>
+                Pending
+            </option>
+
+            <option value="Rejected"
+                {% if status_filter == "Rejected" %}selected{% endif %}>
+                Rejected
+            </option>
+
+        </select>
+
+    </div>
+
+
+    <div class="search-actions">
+
+        <button type="submit">
+            Search
+        </button>
+
+        <a href="/admin" class="clear-btn">
+            Clear
+        </a>
+
+    </div>
+
+</form>
+
+
+            {% if records %}
+
+            <div class="table-container">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Certificate ID
+                            </th>
+
+                            <th>
+                                Instrument
+                            </th>
+
+                            <th>
+                                Owner
+                            </th>
+
+                            <th>
+                                Status
+                            </th>
+
+                            <th>
+                                Actions
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for record in records %}
+
+                        <tr>
+
+                            <td>
+                                <strong>
+                                    {{ record["certificate_id"] }}
+                                </strong>
+                            </td>
+
+                            <td>
+                                {{ record["instrument_name"] }}
+                            </td>
+
+                            <td>
+                                {{ record["owner_name"] }}
+                            </td>
+
+                            <td>
+
+                                <span class="status">
+                                    {{ record["status"] }}
+                                </span>
+
+                            </td>
+
+                            <td>
+
+                                <a
+                                    class="edit-btn"
+                                    href="{{ url_for('edit_instrument', record_id=record['id']) }}"
+                                >
+                                    Edit
+                                </a>
+
+
+                                <form
+                                    action="{{ url_for('delete_instrument', record_id=record['id']) }}"
+                                    method="POST"
+                                    style="display:inline;"
+                                    onsubmit="return confirm('Are you sure you want to delete this record?');"
+                                >
+
+                                    <button
+                                        type="submit"
+                                        class="delete-btn"
+                                    >
+                                        Delete
+                                    </button>
+
+                                </form>
+
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            {% else %}
+
+            <p>
+                No instrument records found.
+            </p>
+
+            {% endif %}
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<footer>
+
+    <p>
+        © 2026 TechTitans | Admin Dashboard
+    </p>
+
+</footer>
+
+
+</body>
+
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>TechTitans | Edit Instrument</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<header>
+    <div class="logo">TechTitans</div>
+
+    <nav>
+        <a href="/">Home</a>
+        <a href="/admin">Admin Panel</a>
+        <a href="/logout">Logout</a>
+    </nav>
+</header>
+
+
+<main class="admin-container">
+
+    <section class="admin-card">
+
+        <h1>Edit Instrument</h1>
+
+        <p class="subtitle">
+            Update verification record details.
+        </p>
+
+
+        <form
+            action="/update/{{ record['id'] }}"
+            method="POST"
+        >
+
+            <div class="form-group">
+
+                <label>Certificate ID</label>
+
+                <input
+                    type="text"
+                    name="certificate_id"
+                    value="{{ record['certificate_id'] }}"
+                    required
+                >
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label>Instrument Name</label>
+
+                <input
+                    type="text"
+                    name="instrument_name"
+                    value="{{ record['instrument_name'] }}"
+                    required
+                >
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label>Owner Name</label>
+
+                <input
+                    type="text"
+                    name="owner_name"
+                    value="{{ record['owner_name'] }}"
+                    required
+                >
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label>Status</label>
+
+                <select name="status" required>
+
+                    <option
+                        value="Verified"
+                        {% if record['status'] == 'Verified' %}selected{% endif %}
+                    >
+                        Verified
+                    </option>
+
+                    <option
+                        value="Pending"
+                        {% if record['status'] == 'Pending' %}selected{% endif %}
+                    >
+                        Pending
+                    </option>
+
+                    <option
+                        value="Rejected"
+                        {% if record['status'] == 'Rejected' %}selected{% endif %}
+                    >
+                        Rejected
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <button type="submit">
+                Update Instrument
+            </button>
+
+        </form>
+
+
+        <br>
+
+        <a href="/admin">
+            ← Back to Admin Panel
+        </a>
+
+    </section>
+
+</main>
+
+
+<footer>
+
+    <p>
+        © 2026 TechTitans | Online Verification System
+    </p>
+
+</footer>
+
+</body>
+
+</html>

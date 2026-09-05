@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>TechTitans | Instrument Verification</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<header>
+
+    <div class="logo">
+        TechTitans
+    </div>
+
+    <nav>
+        <a href="/">Home</a>
+        <a href="/admin">Admin</a>
+    </nav>
+
+</header>
+
+
+<main>
+
+    <!-- HERO -->
+
+    <section class="hero">
+
+        <div class="hero-content">
+
+            <p class="brand-small">
+                TECHTITANS ONLINE SERVICES
+            </p>
+
+            <h1>
+                Instrument Verification Portal
+            </h1>
+
+            <p class="hero-description">
+                Verify the authenticity and current status of
+                weighing and measuring instruments using a
+                unique certificate ID.
+            </p>
+
+
+            <!-- VERIFICATION CARD -->
+
+            <div class="verify-card">
+
+                <div class="verify-card-header">
+
+                    <span class="verify-icon">
+                        ✓
+                    </span>
+
+                    <div>
+                        <h2>
+                            Verify Certificate
+                        </h2>
+
+                        <p>
+                            Enter your Certificate ID to check
+                            the official verification record.
+                        </p>
+                    </div>
+
+                </div>
+
+
+                <form action="/verify" method="POST">
+
+                    <div class="form-group">
+
+                        <label for="instrument_id">
+                            Certificate ID
+                        </label>
+
+                        <input
+                            id="instrument_id"
+                            type="text"
+                            name="instrument_id"
+                            placeholder="Example: TEST003"
+                            autocomplete="off"
+                            required
+                        >
+
+                    </div>
+
+
+                    <button type="submit">
+                        Verify Certificate
+                    </button>
+
+                </form>
+
+
+                <p class="verification-note">
+                    🔒 Your certificate ID is checked against
+                    the TechTitans verification database.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- FEATURES -->
+
+    <section class="features-section">
+
+        <div class="section-heading">
+
+            <p class="brand-small">
+                WHY USE TECHTITANS
+            </p>
+
+            <h2>
+                Simple. Fast. Reliable.
+            </h2>
+
+            <p>
+                Everything you need to verify an instrument
+                certificate in one place.
+            </p>
+
+        </div>
+
+
+        <div class="features">
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+                    ✓
+                </div>
+
+                <h3>
+                    Quick Verification
+                </h3>
+
+                <p>
+                    Check a certificate record quickly
+                    using its unique certificate ID.
+                </p>
+
+            </div>
+
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+                    🔒
+                </div>
+
+                <h3>
+                    Secure Records
+                </h3>
+
+                <p>
+                    Verification records are maintained
+                    through a structured database system.
+                </p>
+
+            </div>
+
+
+            <div class="feature-card">
+
+                <div class="feature-icon">
+                    📄
+                </div>
+
+                <h3>
+                    Digital Certificate
+                </h3>
+
+                <p>
+                    View instrument details and print
+                    the verification result digitally.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- HOW IT WORKS -->
+
+    <section class="how-section">
+
+        <div class="section-heading">
+
+            <p class="brand-small">
+                PROCESS
+            </p>
+
+            <h2>
+                How It Works
+            </h2>
+
+            <p>
+                Verify an instrument in three simple steps.
+            </p>
+
+        </div>
+
+
+        <div class="steps">
+
+            <div class="step">
+
+                <span>
+                    01
+                </span>
+
+                <h3>
+                    Enter Certificate ID
+                </h3>
+
+                <p>
+                    Enter the unique certificate number
+                    associated with the instrument.
+                </p>
+
+            </div>
+
+
+            <div class="step">
+
+                <span>
+                    02
+                </span>
+
+                <h3>
+                    Verify
+                </h3>
+
+                <p>
+                    The system checks the certificate ID
+                    against the verification database.
+                </p>
+
+            </div>
+
+
+            <div class="step">
+
+                <span>
+                    03
+                </span>
+
+                <h3>
+                    View Result
+                </h3>
+
+                <p>
+                    Instantly view the instrument details
+                    and current verification status.
+                </p>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- TRUST SECTION -->
+
+    <section class="trust-section">
+
+        <div>
+
+            <p class="brand-small">
+                TECHTITANS
+            </p>
+
+            <h2>
+                Digital Instrument Verification
+            </h2>
+
+            <p>
+                A centralized online portal for checking
+                instrument verification records quickly
+                and conveniently.
+            </p>
+
+        </div>
+
+
+        <a href="#top" class="back-btn">
+            Verify a Certificate
+        </a>
+
+    </section>
+
+</main>
+
+
+<footer>
+
+    <p>
+        © 2026 TechTitans | Online Instrument Verification System
+    </p>
+
+</footer>
+
+
+</body>
+
+</html>
