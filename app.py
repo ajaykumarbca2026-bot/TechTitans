@@ -1,27 +1,32 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, send_file
 import sqlite3
-import qrcode
+import os
 import io
-import base64
+import qrcode
 
 app = Flask(__name__)
 
-app.secret_key = "techtitans_secret_key_2026"
+app.secret_key = os.environ.get(
+    "SECRET_KEY",
+    "techtitans_secret_key_2026"
+)
 
-# LIVE WEBSITE URL
-LIVE_URL = "https://techtitans-fjvn.onrender.com"
 
+# ============================================================
+# DATABASE
+# ============================================================
 
-# ================= DATABASE =================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE = os.path.join(BASE_DIR, "verification.db")
+
 
 def get_db():
-    conn = sqlite3.connect("verification.db")
+    conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def init_db():
-
     conn = get_db()
 
     conn.execute("""
@@ -40,51 +45,62 @@ def init_db():
 
     if existing == 0:
 
-        conn.execute("""
-            INSERT INTO instruments
-            (certificate_id, instrument_name, owner_name, status)
-            VALUES (?, ?, ?, ?)
-        """, (
-            "TEST001",
-            "Digital Weighing Machine",
-            "ABC Traders",
-            "Verified"
-        ))
+        demo_records = [
+            (
+                "TEST001",
+                "Digital Weighing Machine",
+                "ABC Traders",
+                "Verified"
+            ),
+            (
+                "TEST002",
+                "Digital Measuring Scale",
+                "XYZ Store",
+                "Pending"
+            ),
+            (
+                "TEST003",
+                "Electronic Weighing Machine",
+                "TechTitans Demo",
+                "Verified"
+            )
+        ]
 
-        conn.execute("""
+        conn.executemany("""
             INSERT INTO instruments
-            (certificate_id, instrument_name, owner_name, status)
+            (
+                certificate_id,
+                instrument_name,
+                owner_name,
+                status
+            )
             VALUES (?, ?, ?, ?)
-        """, (
-            "TEST002",
-            "Digital Measuring Scale",
-            "XYZ Store",
-            "Pending"
-        ))
-
-        conn.execute("""
-            INSERT INTO instruments
-            (certificate_id, instrument_name, owner_name, status)
-            VALUES (?, ?, ?, ?)
-        """, (
-            "TEST003",
-            "Electronic Weighing Machine",
-            "TechTitans Demo",
-            "Verified"
-        ))
+        """, demo_records)
 
     conn.commit()
     conn.close()
 
 
-# ================= HOME =================
+# IMPORTANT:
+# Render/Gunicorn does NOT necessarily execute
+# "if __name__ == '__main__'"
+# Therefore database initialization must happen here.
+
+init_db()
+
+
+# ============================================================
+# HOME
+# ============================================================
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
 
-# ================= VERIFY =================
+# ============================================================
+# VERIFY
+# ============================================================
 
 @app.route("/verify", methods=["POST"])
 def verify():
@@ -107,56 +123,29 @@ def verify():
 
     conn.close()
 
-    qr_code = None
-
-    if record:
-
-        # IMPORTANT:
-        # QR points to LIVE Render website
-
-        verification_url = (
-            LIVE_URL
-            + "/verify/"
-            + record["certificate_id"]
-        )
-
-        qr = qrcode.QRCode(
-            version=1,
-            box_size=8,
-            border=4
-        )
-
-        qr.add_data(verification_url)
-        qr.make(fit=True)
-
-        qr_image = qr.make_image()
-
-        buffer = io.BytesIO()
-
-        qr_image.save(
-            buffer,
-            format="PNG"
-        )
-
-        qr_code = base64.b64encode(
-            buffer.getvalue()
-        ).decode("utf-8")
+    # URL that can be encoded into QR
+    verify_url = url_for(
+        "verify_by_qr",
+        certificate_id=instrument_id,
+        _external=True
+    )
 
     return render_template(
         "result.html",
         record=record,
         instrument_id=instrument_id,
-        qr_code=qr_code
+        verify_url=verify_url
     )
 
 
-# ================= QR DIRECT VERIFICATION =================
+# ============================================================
+# QR VERIFICATION
+# ============================================================
 
-@app.route(
-    "/verify/<certificate_id>",
-    methods=["GET"]
-)
-def verify_certificate(certificate_id):
+@app.route("/verify/<certificate_id>")
+def verify_by_qr(certificate_id):
+
+    certificate_id = certificate_id.strip()
 
     conn = get_db()
 
@@ -171,15 +160,60 @@ def verify_certificate(certificate_id):
 
     conn.close()
 
+    verify_url = url_for(
+        "verify_by_qr",
+        certificate_id=certificate_id,
+        _external=True
+    )
+
     return render_template(
         "result.html",
         record=record,
         instrument_id=certificate_id,
-        qr_code=None
+        verify_url=verify_url
     )
 
 
-# ================= ADMIN =================
+# ============================================================
+# QR CODE IMAGE
+# ============================================================
+
+@app.route("/qr/<certificate_id>")
+def generate_qr(certificate_id):
+
+    verify_url = url_for(
+        "verify_by_qr",
+        certificate_id=certificate_id,
+        _external=True
+    )
+
+    qr = qrcode.QRCode(
+        version=1,
+        box_size=10,
+        border=4
+    )
+
+    qr.add_data(verify_url)
+    qr.make(fit=True)
+
+    img = qr.make_image(
+        fill_color="black",
+        back_color="white"
+    )
+
+    image_stream = io.BytesIO()
+    img.save(image_stream, format="PNG")
+    image_stream.seek(0)
+
+    return send_file(
+        image_stream,
+        mimetype="image/png"
+    )
+
+
+# ============================================================
+# ADMIN PANEL
+# ============================================================
 
 @app.route("/admin")
 def admin():
@@ -290,7 +324,9 @@ def admin():
     )
 
 
-# ================= ADMIN LOGIN =================
+# ============================================================
+# ADMIN LOGIN
+# ============================================================
 
 @app.route(
     "/admin/login",
@@ -310,7 +346,10 @@ def admin_login():
             ""
         ).strip()
 
-        if username == "admin" and password == "1234":
+        if (
+            username == "admin"
+            and password == "1234"
+        ):
 
             session["logged_in"] = True
 
@@ -328,7 +367,9 @@ def admin_login():
     )
 
 
-# ================= LOGOUT =================
+# ============================================================
+# LOGOUT
+# ============================================================
 
 @app.route("/logout")
 def logout():
@@ -340,7 +381,9 @@ def logout():
     )
 
 
-# ================= ADD =================
+# ============================================================
+# ADD INSTRUMENT
+# ============================================================
 
 @app.route(
     "/add",
@@ -349,7 +392,9 @@ def logout():
 def add_instrument():
 
     if not session.get("logged_in"):
-        return redirect(url_for("admin_login"))
+        return redirect(
+            url_for("admin_login")
+        )
 
     certificate_id = request.form.get(
         "certificate_id",
@@ -370,6 +415,14 @@ def add_instrument():
         "status",
         ""
     ).strip()
+
+    if not certificate_id or not instrument_name or not owner_name or not status:
+        return """
+        <h1>Error</h1>
+        <p>All fields are required.</p>
+        <br>
+        <a href="/admin">Back to Admin Panel</a>
+        """
 
     conn = get_db()
 
@@ -414,7 +467,9 @@ def add_instrument():
     )
 
 
-# ================= EDIT =================
+# ============================================================
+# EDIT PAGE
+# ============================================================
 
 @app.route(
     "/edit/<int:record_id>"
@@ -422,7 +477,9 @@ def add_instrument():
 def edit_instrument(record_id):
 
     if not session.get("logged_in"):
-        return redirect(url_for("admin_login"))
+        return redirect(
+            url_for("admin_login")
+        )
 
     conn = get_db()
 
@@ -446,7 +503,9 @@ def edit_instrument(record_id):
     )
 
 
-# ================= UPDATE =================
+# ============================================================
+# UPDATE
+# ============================================================
 
 @app.route(
     "/update/<int:record_id>",
@@ -455,7 +514,9 @@ def edit_instrument(record_id):
 def update_instrument(record_id):
 
     if not session.get("logged_in"):
-        return redirect(url_for("admin_login"))
+        return redirect(
+            url_for("admin_login")
+        )
 
     certificate_id = request.form.get(
         "certificate_id",
@@ -484,11 +545,13 @@ def update_instrument(record_id):
         conn.execute(
             """
             UPDATE instruments
+
             SET
                 certificate_id = ?,
                 instrument_name = ?,
                 owner_name = ?,
                 status = ?
+
             WHERE id = ?
             """,
             (
@@ -520,7 +583,9 @@ def update_instrument(record_id):
     )
 
 
-# ================= DELETE =================
+# ============================================================
+# DELETE
+# ============================================================
 
 @app.route(
     "/delete/<int:record_id>",
@@ -529,7 +594,9 @@ def update_instrument(record_id):
 def delete_instrument(record_id):
 
     if not session.get("logged_in"):
-        return redirect(url_for("admin_login"))
+        return redirect(
+            url_for("admin_login")
+        )
 
     conn = get_db()
 
@@ -549,11 +616,21 @@ def delete_instrument(record_id):
     )
 
 
-# ================= START =================
-
-# Initialize database when the application starts
-init_db()
-
+# ============================================================
+# RUN LOCAL SERVER
+# ============================================================
 
 if __name__ == "__main__":
-    app.run(debug=True)
+
+    port = int(
+        os.environ.get(
+            "PORT",
+            5000
+        )
+    )
+
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=True
+    )
