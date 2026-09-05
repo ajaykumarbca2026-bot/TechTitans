@@ -2,16 +2,22 @@
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
     <title>TechTitans | Verification Result</title>
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='style.css') }}">
+
 </head>
 
+
 <body>
+
 
 <header>
 
@@ -20,12 +26,23 @@
     </div>
 
     <nav>
-        <a href="/">Home</a>
+
+        <a href="/">
+            Home
+        </a>
 
         {% if session.get("logged_in") %}
-            <a href="/admin">Admin Panel</a>
-            <a href="/logout">Logout</a>
+
+            <a href="/admin">
+                Admin Panel
+            </a>
+
+            <a href="/logout">
+                Logout
+            </a>
+
         {% endif %}
+
     </nav>
 
 </header>
@@ -33,307 +50,377 @@
 
 <main class="result-container">
 
+
 {% if record %}
 
-    <section class="certificate-card">
 
-        <!-- HEADER -->
-
-        <div class="certificate-header">
-
-            <div>
-
-                <p class="brand-small">
-                    TECHTITANS
-                </p>
-
-                <h1>
-                    Verification Certificate
-                </h1>
-
-                <p class="certificate-subtitle">
-                    Online Instrument Verification Record
-                </p>
-
-            </div>
+<section class="certificate-card">
 
 
-            <div class="status-badge
-                {% if record['status'] == 'Verified' %}
-                    status-verified
-                {% elif record['status'] == 'Pending' %}
-                    status-pending
-                {% else %}
-                    status-rejected
-                {% endif %}
-            ">
+    <!-- HEADER -->
 
-                {% if record["status"] == "Verified" %}
-                    ✓ Verified
-                {% elif record["status"] == "Pending" %}
-                    ⏳ Pending
-                {% else %}
-                    ✕ Rejected
-                {% endif %}
+    <div class="certificate-header">
 
-            </div>
+        <div>
 
-        </div>
+            <p class="brand-small">
+                TECHTITANS
+            </p>
 
+            <h1>
+                Verification Certificate
+            </h1>
 
-        <div class="certificate-line"></div>
-
-
-        <!-- INTRODUCTION -->
-
-        <div class="certificate-intro-box">
-
-            <p>
-                This certificate provides the verification
-                status of the instrument registered in the
-                TechTitans Online Verification System.
+            <p class="certificate-subtitle">
+                Online Instrument Verification Record
             </p>
 
         </div>
 
 
-        <!-- CERTIFICATE DETAILS -->
+        <div class="status-badge
+            {% if record['status'] == 'Verified' %}
+                status-verified
+            {% elif record['status'] == 'Pending' %}
+                status-pending
+            {% else %}
+                status-rejected
+            {% endif %}
+        ">
 
-        <div class="certificate-section-title">
-            Certificate Details
+            {% if record["status"] == "Verified" %}
+
+                ✓ Verified
+
+            {% elif record["status"] == "Pending" %}
+
+                ⏳ Pending
+
+            {% else %}
+
+                ✕ Rejected
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <div class="certificate-line"></div>
+
+
+    <!-- INTRO -->
+
+    <div class="certificate-intro-box">
+
+        <p>
+
+            This certificate provides the verification
+            status of the instrument registered in the
+            TechTitans Online Verification System.
+
+        </p>
+
+    </div>
+
+
+    <!-- DETAILS -->
+
+    <div class="certificate-section-title">
+
+        Certificate Details
+
+    </div>
+
+
+    <div class="details-grid">
+
+
+        <div class="detail-box">
+
+            <span>
+                Certificate ID
+            </span>
+
+            <strong>
+                {{ record["certificate_id"] }}
+            </strong>
+
         </div>
 
 
-        <div class="details-grid">
+        <div class="detail-box">
 
-            <div class="detail-box">
+            <span>
+                Instrument Name
+            </span>
 
-                <span>
-                    Certificate ID
-                </span>
+            <strong>
+                {{ record["instrument_name"] }}
+            </strong>
 
+        </div>
+
+
+        <div class="detail-box">
+
+            <span>
+                Owner / Organization
+            </span>
+
+            <strong>
+                {{ record["owner_name"] }}
+            </strong>
+
+        </div>
+
+
+        <div class="detail-box">
+
+            <span>
+                Current Status
+            </span>
+
+            <strong>
+                {{ record["status"] }}
+            </strong>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- VERIFICATION MESSAGE -->
+
+    <div class="verification-message
+
+        {% if record['status'] == 'Verified' %}
+            message-verified
+        {% elif record['status'] == 'Pending' %}
+            message-pending
+        {% else %}
+            message-rejected
+        {% endif %}
+
+    ">
+
+
+        {% if record["status"] == "Verified" %}
+
+            <div class="message-title">
+                ✓ Verification Successful
+            </div>
+
+            <p>
+
+                The certificate ID entered matches a
+                verified record in the TechTitans system.
+                The instrument is currently marked as
+                verified.
+
+            </p>
+
+
+        {% elif record["status"] == "Pending" %}
+
+            <div class="message-title">
+                ⏳ Verification Pending
+            </div>
+
+            <p>
+
+                This instrument record exists in the
+                TechTitans system, but its verification
+                process is currently pending.
+
+            </p>
+
+
+        {% else %}
+
+            <div class="message-title">
+                ✕ Verification Rejected
+            </div>
+
+            <p>
+
+                This instrument record exists in the
+                system but is currently marked as rejected.
+
+            </p>
+
+        {% endif %}
+
+
+    </div>
+
+
+    <!-- QR CODE -->
+
+    {% if qr_code %}
+
+    <div class="qr-section">
+
+        <div class="qr-box">
+
+            <img
+                src="data:image/png;base64,{{ qr_code }}"
+                alt="Certificate Verification QR Code"
+            >
+
+        </div>
+
+        <p>
+            Scan this QR code to verify this certificate online.
+        </p>
+
+    </div>
+
+    {% endif %}
+
+
+    <!-- DIGITAL INFORMATION -->
+
+    <div class="digital-note">
+
+        <span>
+            DIGITAL VERIFICATION
+        </span>
+
+        <p>
+
+            This result is generated directly from the
+            TechTitans verification database.
+
+        </p>
+
+    </div>
+
+
+    <!-- FOOTER -->
+
+    <div class="certificate-footer">
+
+        <div>
+
+            <p>
+
+                Digitally generated by
+                <strong>TechTitans</strong>
+                Online Verification System.
+
+            </p>
+
+        </div>
+
+
+        <div>
+
+            <p>
+
+                Certificate ID:
                 <strong>
                     {{ record["certificate_id"] }}
                 </strong>
 
-            </div>
-
-
-            <div class="detail-box">
-
-                <span>
-                    Instrument Name
-                </span>
-
-                <strong>
-                    {{ record["instrument_name"] }}
-                </strong>
-
-            </div>
-
-
-            <div class="detail-box">
-
-                <span>
-                    Owner / Organization
-                </span>
-
-                <strong>
-                    {{ record["owner_name"] }}
-                </strong>
-
-            </div>
-
-
-            <div class="detail-box">
-
-                <span>
-                    Current Status
-                </span>
-
-                <strong>
-                    {{ record["status"] }}
-                </strong>
-
-            </div>
-
-        </div>
-
-
-        <!-- VERIFICATION RESULT -->
-
-        <div class="verification-message
-
-            {% if record['status'] == 'Verified' %}
-                message-verified
-            {% elif record['status'] == 'Pending' %}
-                message-pending
-            {% else %}
-                message-rejected
-            {% endif %}
-
-        ">
-
-
-            {% if record["status"] == "Verified" %}
-
-                <div class="message-title">
-                    ✓ Verification Successful
-                </div>
-
-                <p>
-                    The certificate ID entered matches a
-                    verified record in the TechTitans system.
-                    The instrument is currently marked as
-                    verified.
-                </p>
-
-
-            {% elif record["status"] == "Pending" %}
-
-                <div class="message-title">
-                    ⏳ Verification Pending
-                </div>
-
-                <p>
-                    This instrument record exists in the
-                    TechTitans system, but its verification
-                    process is currently pending.
-                </p>
-
-
-            {% else %}
-
-                <div class="message-title">
-                    ✕ Verification Rejected
-                </div>
-
-                <p>
-                    This instrument record exists in the
-                    system but is currently marked as rejected.
-                </p>
-
-            {% endif %}
-
-        </div>
-
-
-        <!-- DIGITAL INFORMATION -->
-
-        <div class="digital-note">
-
-            <span>
-                DIGITAL VERIFICATION
-            </span>
-
-            <p>
-                This result is generated directly from the
-                TechTitans verification database.
             </p>
 
         </div>
 
-
-        <!-- FOOTER -->
-
-        <div class="certificate-footer">
-
-            <div>
-
-                <p>
-                    Digitally generated by
-                    <strong>TechTitans</strong>
-                    Online Verification System.
-                </p>
-
-            </div>
+    </div>
 
 
-            <div>
+    <!-- ACTIONS -->
 
-                <p>
-                    Certificate ID:
-                    <strong>
-                        {{ record["certificate_id"] }}
-                    </strong>
-                </p>
+    <div class="certificate-actions">
 
-            </div>
+        <button
+            onclick="window.print()"
+            class="print-btn"
+            type="button"
+        >
 
-        </div>
+            🖨 Print Certificate
 
-
-        <!-- ACTIONS -->
-
-        <div class="certificate-actions">
-
-            <button
-                onclick="window.print()"
-                class="print-btn"
-            >
-                🖨 Print Certificate
-            </button>
-
-
-            <a
-                href="/"
-                class="back-btn"
-            >
-                ← Verify Another
-            </a>
-
-        </div>
-
-    </section>
-
-
-{% else %}
-
-    <!-- NOT FOUND -->
-
-    <section class="not-found-card">
-
-        <div class="not-found-icon">
-            ?
-        </div>
-
-        <p class="brand-small">
-            TECHTITANS
-        </p>
-
-        <h1>
-            Certificate Not Found
-        </h1>
-
-        <p>
-            No verification record was found for the
-            certificate ID entered.
-        </p>
-
-
-        <div class="searched-id">
-
-            <span>
-                Searched Certificate ID
-            </span>
-
-            <strong>
-                {{ instrument_id }}
-            </strong>
-
-        </div>
+        </button>
 
 
         <a
             href="/"
             class="back-btn"
         >
-            ← Try Again
+
+            ← Verify Another
+
         </a>
 
-    </section>
+    </div>
+
+
+</section>
+
+
+{% else %}
+
+
+<!-- NOT FOUND -->
+
+<section class="not-found-card">
+
+
+    <div class="not-found-icon">
+        ?
+    </div>
+
+
+    <p class="brand-small">
+        TECHTITANS
+    </p>
+
+
+    <h1>
+        Certificate Not Found
+    </h1>
+
+
+    <p>
+
+        No verification record was found for the
+        certificate ID entered.
+
+    </p>
+
+
+    <div class="searched-id">
+
+        <span>
+            Searched Certificate ID
+        </span>
+
+        <strong>
+            {{ instrument_id }}
+        </strong>
+
+    </div>
+
+
+    <a
+        href="/"
+        class="back-btn"
+    >
+
+        ← Try Again
+
+    </a>
+
+
+</section>
+
 
 {% endif %}
+
 
 </main>
 

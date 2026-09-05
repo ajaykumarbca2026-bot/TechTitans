@@ -1,28 +1,27 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
+import qrcode
+import io
+import base64
 
 app = Flask(__name__)
 
 app.secret_key = "techtitans_secret_key_2026"
 
+# LIVE WEBSITE URL
+LIVE_URL = "https://techtitans-fjvn.onrender.com"
+
 
 # ================= DATABASE =================
 
-import os
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE = os.path.join(BASE_DIR, "verification.db")
-
-
 def get_db():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
+    conn = sqlite3.connect("verification.db")
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def init_db():
+
     conn = get_db()
 
     conn.execute("""
@@ -91,14 +90,83 @@ def home():
 def verify():
 
     instrument_id = request.form.get(
-        "instrument_id", ""
+        "instrument_id",
+        ""
     ).strip()
 
     conn = get_db()
 
     record = conn.execute(
-        "SELECT * FROM instruments WHERE certificate_id = ?",
+        """
+        SELECT *
+        FROM instruments
+        WHERE certificate_id = ?
+        """,
         (instrument_id,)
+    ).fetchone()
+
+    conn.close()
+
+    qr_code = None
+
+    if record:
+
+        # IMPORTANT:
+        # QR points to LIVE Render website
+
+        verification_url = (
+            LIVE_URL
+            + "/verify/"
+            + record["certificate_id"]
+        )
+
+        qr = qrcode.QRCode(
+            version=1,
+            box_size=8,
+            border=4
+        )
+
+        qr.add_data(verification_url)
+        qr.make(fit=True)
+
+        qr_image = qr.make_image()
+
+        buffer = io.BytesIO()
+
+        qr_image.save(
+            buffer,
+            format="PNG"
+        )
+
+        qr_code = base64.b64encode(
+            buffer.getvalue()
+        ).decode("utf-8")
+
+    return render_template(
+        "result.html",
+        record=record,
+        instrument_id=instrument_id,
+        qr_code=qr_code
+    )
+
+
+# ================= QR DIRECT VERIFICATION =================
+
+@app.route(
+    "/verify/<certificate_id>",
+    methods=["GET"]
+)
+def verify_certificate(certificate_id):
+
+    conn = get_db()
+
+    record = conn.execute(
+        """
+        SELECT *
+        FROM instruments
+        WHERE certificate_id = ?
+        """,
+        (certificate_id,)
     ).fetchone()
 
     conn.close()
@@ -106,7 +174,8 @@ def verify():
     return render_template(
         "result.html",
         record=record,
-        instrument_id=instrument_id
+        instrument_id=certificate_id,
+        qr_code=None
     )
 
 
@@ -118,17 +187,28 @@ def admin():
     if not session.get("logged_in"):
         return redirect(url_for("admin_login"))
 
-    search = request.args.get("search", "").strip()
-    status_filter = request.args.get("status", "").strip()
+    search = request.args.get(
+        "search",
+        ""
+    ).strip()
+
+    status_filter = request.args.get(
+        "status",
+        ""
+    ).strip()
 
     conn = get_db()
 
-    # Base query
-    query = "SELECT * FROM instruments WHERE 1=1"
+    query = """
+        SELECT *
+        FROM instruments
+        WHERE 1=1
+    """
+
     params = []
 
-    # Search Certificate ID / Instrument / Owner
     if search:
+
         query += """
             AND (
                 certificate_id LIKE ?
@@ -145,37 +225,54 @@ def admin():
             search_value
         ])
 
-    # Status filter
     if status_filter:
-        query += " AND status = ?"
+
+        query += """
+            AND status = ?
+        """
+
         params.append(status_filter)
 
-    query += " ORDER BY id DESC"
+    query += """
+        ORDER BY id DESC
+    """
 
     records = conn.execute(
         query,
         params
     ).fetchall()
 
-
-    # Dashboard statistics
-
     total_records = conn.execute(
-        "SELECT COUNT(*) FROM instruments"
+        """
+        SELECT COUNT(*)
+        FROM instruments
+        """
     ).fetchone()[0]
 
     verified_count = conn.execute(
-        "SELECT COUNT(*) FROM instruments WHERE status = ?",
+        """
+        SELECT COUNT(*)
+        FROM instruments
+        WHERE status = ?
+        """,
         ("Verified",)
     ).fetchone()[0]
 
     pending_count = conn.execute(
-        "SELECT COUNT(*) FROM instruments WHERE status = ?",
+        """
+        SELECT COUNT(*)
+        FROM instruments
+        WHERE status = ?
+        """,
         ("Pending",)
     ).fetchone()[0]
 
     rejected_count = conn.execute(
-        "SELECT COUNT(*) FROM instruments WHERE status = ?",
+        """
+        SELECT COUNT(*)
+        FROM instruments
+        WHERE status = ?
+        """,
         ("Rejected",)
     ).fetchone()[0]
 
@@ -192,65 +289,43 @@ def admin():
         status_filter=status_filter
     )
 
-    # Dashboard statistics
-    total_records = conn.execute(
-        "SELECT COUNT(*) FROM instruments"
-    ).fetchone()[0]
-
-    verified_count = conn.execute(
-        "SELECT COUNT(*) FROM instruments WHERE status = ?",
-        ("Verified",)
-    ).fetchone()[0]
-
-    pending_count = conn.execute(
-        "SELECT COUNT(*) FROM instruments WHERE status = ?",
-        ("Pending",)
-    ).fetchone()[0]
-
-    rejected_count = conn.execute(
-        "SELECT COUNT(*) FROM instruments WHERE status = ?",
-        ("Rejected",)
-    ).fetchone()[0]
-
-    conn.close()
-
-    return render_template(
-        "admin.html",
-        records=records,
-        total_records=total_records,
-        verified_count=verified_count,
-        pending_count=pending_count,
-        rejected_count=rejected_count
-    )
-
 
 # ================= ADMIN LOGIN =================
 
-@app.route("/admin/login", methods=["GET", "POST"])
+@app.route(
+    "/admin/login",
+    methods=["GET", "POST"]
+)
 def admin_login():
 
     if request.method == "POST":
 
         username = request.form.get(
-            "username", ""
+            "username",
+            ""
         ).strip()
 
         password = request.form.get(
-            "password", ""
+            "password",
+            ""
         ).strip()
 
         if username == "admin" and password == "1234":
 
             session["logged_in"] = True
 
-            return redirect(url_for("admin"))
+            return redirect(
+                url_for("admin")
+            )
 
         return render_template(
             "login.html",
             error="Invalid username or password."
         )
 
-    return render_template("login.html")
+    return render_template(
+        "login.html"
+    )
 
 
 # ================= LOGOUT =================
@@ -260,47 +335,64 @@ def logout():
 
     session.clear()
 
-    return redirect(url_for("admin_login"))
+    return redirect(
+        url_for("admin_login")
+    )
 
 
 # ================= ADD =================
 
-@app.route("/add", methods=["POST"])
+@app.route(
+    "/add",
+    methods=["POST"]
+)
 def add_instrument():
 
     if not session.get("logged_in"):
         return redirect(url_for("admin_login"))
 
     certificate_id = request.form.get(
-        "certificate_id", ""
+        "certificate_id",
+        ""
     ).strip()
 
     instrument_name = request.form.get(
-        "instrument_name", ""
+        "instrument_name",
+        ""
     ).strip()
 
     owner_name = request.form.get(
-        "owner_name", ""
+        "owner_name",
+        ""
     ).strip()
 
     status = request.form.get(
-        "status", ""
+        "status",
+        ""
     ).strip()
 
     conn = get_db()
 
     try:
 
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO instruments
-            (certificate_id, instrument_name, owner_name, status)
+            (
+                certificate_id,
+                instrument_name,
+                owner_name,
+                status
+            )
             VALUES (?, ?, ?, ?)
-        """, (
-            certificate_id,
-            instrument_name,
-            owner_name,
-            status
-        ))
+            """,
+            (
+                certificate_id,
+                instrument_name,
+                owner_name,
+                status
+            )
+        )
 
         conn.commit()
 
@@ -317,12 +409,16 @@ def add_instrument():
 
     conn.close()
 
-    return redirect(url_for("admin"))
+    return redirect(
+        url_for("admin")
+    )
 
 
-# ================= EDIT PAGE =================
+# ================= EDIT =================
 
-@app.route("/edit/<int:record_id>")
+@app.route(
+    "/edit/<int:record_id>"
+)
 def edit_instrument(record_id):
 
     if not session.get("logged_in"):
@@ -331,7 +427,11 @@ def edit_instrument(record_id):
     conn = get_db()
 
     record = conn.execute(
-        "SELECT * FROM instruments WHERE id = ?",
+        """
+        SELECT *
+        FROM instruments
+        WHERE id = ?
+        """,
         (record_id,)
     ).fetchone()
 
@@ -348,46 +448,57 @@ def edit_instrument(record_id):
 
 # ================= UPDATE =================
 
-@app.route("/update/<int:record_id>", methods=["POST"])
+@app.route(
+    "/update/<int:record_id>",
+    methods=["POST"]
+)
 def update_instrument(record_id):
 
     if not session.get("logged_in"):
         return redirect(url_for("admin_login"))
 
     certificate_id = request.form.get(
-        "certificate_id", ""
+        "certificate_id",
+        ""
     ).strip()
 
     instrument_name = request.form.get(
-        "instrument_name", ""
+        "instrument_name",
+        ""
     ).strip()
 
     owner_name = request.form.get(
-        "owner_name", ""
+        "owner_name",
+        ""
     ).strip()
 
     status = request.form.get(
-        "status", ""
+        "status",
+        ""
     ).strip()
 
     conn = get_db()
 
     try:
 
-        conn.execute("""
+        conn.execute(
+            """
             UPDATE instruments
-            SET certificate_id = ?,
+            SET
+                certificate_id = ?,
                 instrument_name = ?,
                 owner_name = ?,
                 status = ?
             WHERE id = ?
-        """, (
-            certificate_id,
-            instrument_name,
-            owner_name,
-            status,
-            record_id
-        ))
+            """,
+            (
+                certificate_id,
+                instrument_name,
+                owner_name,
+                status,
+                record_id
+            )
+        )
 
         conn.commit()
 
@@ -404,12 +515,17 @@ def update_instrument(record_id):
 
     conn.close()
 
-    return redirect(url_for("admin"))
+    return redirect(
+        url_for("admin")
+    )
 
 
 # ================= DELETE =================
 
-@app.route("/delete/<int:record_id>", methods=["POST"])
+@app.route(
+    "/delete/<int:record_id>",
+    methods=["POST"]
+)
 def delete_instrument(record_id):
 
     if not session.get("logged_in"):
@@ -418,21 +534,27 @@ def delete_instrument(record_id):
     conn = get_db()
 
     conn.execute(
-        "DELETE FROM instruments WHERE id = ?",
+        """
+        DELETE FROM instruments
+        WHERE id = ?
+        """,
         (record_id,)
     )
 
     conn.commit()
     conn.close()
 
-    return redirect(url_for("admin"))
+    return redirect(
+        url_for("admin")
+    )
 
 
 # ================= START =================
-
-# ================= START =================
-
-init_db()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+
+    init_db()
+
+    app.run(
+        debug=True
+    )

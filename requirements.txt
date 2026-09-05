@@ -1,2 +1,3 @@
 Flask
-Gunicorn
+gunicorn
+qrcode[pil]
