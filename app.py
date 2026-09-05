@@ -1,20 +1,14 @@
-from flask import Flask, render_template, request, redirect, url_for, session, send_file
+from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
 import os
-import io
 import qrcode
 
 app = Flask(__name__)
 
-app.secret_key = os.environ.get(
-    "SECRET_KEY",
-    "techtitans_secret_key_2026"
-)
+app.secret_key = "techtitans_secret_key_2026"
 
 
-# ============================================================
-# DATABASE
-# ============================================================
+# ================= DATABASE =================
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE = os.path.join(BASE_DIR, "verification.db")
@@ -68,12 +62,7 @@ def init_db():
 
         conn.executemany("""
             INSERT INTO instruments
-            (
-                certificate_id,
-                instrument_name,
-                owner_name,
-                status
-            )
+            (certificate_id, instrument_name, owner_name, status)
             VALUES (?, ?, ?, ?)
         """, demo_records)
 
@@ -82,32 +71,25 @@ def init_db():
 
 
 # IMPORTANT:
-# Render/Gunicorn does NOT necessarily execute
-# "if __name__ == '__main__'"
-# Therefore database initialization must happen here.
-
+# Render/Gunicorn ke liye database initialization
+# module load hote hi hona chahiye.
 init_db()
 
 
-# ============================================================
-# HOME
-# ============================================================
+# ================= HOME =================
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
 
-# ============================================================
-# VERIFY
-# ============================================================
+# ================= VERIFY =================
 
 @app.route("/verify", methods=["POST"])
 def verify():
 
     instrument_id = request.form.get(
-        "instrument_id",
-        ""
+        "instrument_id", ""
     ).strip()
 
     conn = get_db()
@@ -123,29 +105,17 @@ def verify():
 
     conn.close()
 
-    # URL that can be encoded into QR
-    verify_url = url_for(
-        "verify_by_qr",
-        certificate_id=instrument_id,
-        _external=True
-    )
-
     return render_template(
         "result.html",
         record=record,
-        instrument_id=instrument_id,
-        verify_url=verify_url
+        instrument_id=instrument_id
     )
 
 
-# ============================================================
-# QR VERIFICATION
-# ============================================================
+# ================= QR CODE =================
 
-@app.route("/verify/<certificate_id>")
-def verify_by_qr(certificate_id):
-
-    certificate_id = certificate_id.strip()
+@app.route("/qr/<certificate_id>")
+def generate_qr(certificate_id):
 
     conn = get_db()
 
@@ -160,60 +130,58 @@ def verify_by_qr(certificate_id):
 
     conn.close()
 
-    verify_url = url_for(
-        "verify_by_qr",
+    if record is None:
+        return "Certificate not found.", 404
+
+    verification_url = url_for(
+        "verify_page",
         certificate_id=certificate_id,
         _external=True
     )
+
+    img = qrcode.make(verification_url)
+
+    from io import BytesIO
+
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    from flask import send_file
+
+    return send_file(
+        buffer,
+        mimetype="image/png",
+        download_name=f"{certificate_id}_QR.png"
+    )
+
+
+# ================= QR VERIFICATION =================
+
+@app.route("/verify/<certificate_id>")
+def verify_page(certificate_id):
+
+    conn = get_db()
+
+    record = conn.execute(
+        """
+        SELECT *
+        FROM instruments
+        WHERE certificate_id = ?
+        """,
+        (certificate_id,)
+    ).fetchone()
+
+    conn.close()
 
     return render_template(
         "result.html",
         record=record,
-        instrument_id=certificate_id,
-        verify_url=verify_url
+        instrument_id=certificate_id
     )
 
 
-# ============================================================
-# QR CODE IMAGE
-# ============================================================
-
-@app.route("/qr/<certificate_id>")
-def generate_qr(certificate_id):
-
-    verify_url = url_for(
-        "verify_by_qr",
-        certificate_id=certificate_id,
-        _external=True
-    )
-
-    qr = qrcode.QRCode(
-        version=1,
-        box_size=10,
-        border=4
-    )
-
-    qr.add_data(verify_url)
-    qr.make(fit=True)
-
-    img = qr.make_image(
-        fill_color="black",
-        back_color="white"
-    )
-
-    image_stream = io.BytesIO()
-    img.save(image_stream, format="PNG")
-    image_stream.seek(0)
-
-    return send_file(
-        image_stream,
-        mimetype="image/png"
-    )
-
-
-# ============================================================
-# ADMIN PANEL
-# ============================================================
+# ================= ADMIN =================
 
 @app.route("/admin")
 def admin():
@@ -222,13 +190,11 @@ def admin():
         return redirect(url_for("admin_login"))
 
     search = request.args.get(
-        "search",
-        ""
+        "search", ""
     ).strip()
 
     status_filter = request.args.get(
-        "status",
-        ""
+        "status", ""
     ).strip()
 
     conn = get_db()
@@ -277,10 +243,7 @@ def admin():
     ).fetchall()
 
     total_records = conn.execute(
-        """
-        SELECT COUNT(*)
-        FROM instruments
-        """
+        "SELECT COUNT(*) FROM instruments"
     ).fetchone()[0]
 
     verified_count = conn.execute(
@@ -324,9 +287,7 @@ def admin():
     )
 
 
-# ============================================================
-# ADMIN LOGIN
-# ============================================================
+# ================= ADMIN LOGIN =================
 
 @app.route(
     "/admin/login",
@@ -337,19 +298,14 @@ def admin_login():
     if request.method == "POST":
 
         username = request.form.get(
-            "username",
-            ""
+            "username", ""
         ).strip()
 
         password = request.form.get(
-            "password",
-            ""
+            "password", ""
         ).strip()
 
-        if (
-            username == "admin"
-            and password == "1234"
-        ):
+        if username == "admin" and password == "1234":
 
             session["logged_in"] = True
 
@@ -362,14 +318,10 @@ def admin_login():
             error="Invalid username or password."
         )
 
-    return render_template(
-        "login.html"
-    )
+    return render_template("login.html")
 
 
-# ============================================================
-# LOGOUT
-# ============================================================
+# ================= LOGOUT =================
 
 @app.route("/logout")
 def logout():
@@ -381,14 +333,9 @@ def logout():
     )
 
 
-# ============================================================
-# ADD INSTRUMENT
-# ============================================================
+# ================= ADD =================
 
-@app.route(
-    "/add",
-    methods=["POST"]
-)
+@app.route("/add", methods=["POST"])
 def add_instrument():
 
     if not session.get("logged_in"):
@@ -397,39 +344,26 @@ def add_instrument():
         )
 
     certificate_id = request.form.get(
-        "certificate_id",
-        ""
+        "certificate_id", ""
     ).strip()
 
     instrument_name = request.form.get(
-        "instrument_name",
-        ""
+        "instrument_name", ""
     ).strip()
 
     owner_name = request.form.get(
-        "owner_name",
-        ""
+        "owner_name", ""
     ).strip()
 
     status = request.form.get(
-        "status",
-        ""
+        "status", ""
     ).strip()
-
-    if not certificate_id or not instrument_name or not owner_name or not status:
-        return """
-        <h1>Error</h1>
-        <p>All fields are required.</p>
-        <br>
-        <a href="/admin">Back to Admin Panel</a>
-        """
 
     conn = get_db()
 
     try:
 
-        conn.execute(
-            """
+        conn.execute("""
             INSERT INTO instruments
             (
                 certificate_id,
@@ -438,14 +372,12 @@ def add_instrument():
                 status
             )
             VALUES (?, ?, ?, ?)
-            """,
-            (
-                certificate_id,
-                instrument_name,
-                owner_name,
-                status
-            )
-        )
+        """, (
+            certificate_id,
+            instrument_name,
+            owner_name,
+            status
+        ))
 
         conn.commit()
 
@@ -467,13 +399,9 @@ def add_instrument():
     )
 
 
-# ============================================================
-# EDIT PAGE
-# ============================================================
+# ================= EDIT PAGE =================
 
-@app.route(
-    "/edit/<int:record_id>"
-)
+@app.route("/edit/<int:record_id>")
 def edit_instrument(record_id):
 
     if not session.get("logged_in"):
@@ -495,7 +423,7 @@ def edit_instrument(record_id):
     conn.close()
 
     if record is None:
-        return "Record not found."
+        return "Record not found.", 404
 
     return render_template(
         "edit.html",
@@ -503,9 +431,7 @@ def edit_instrument(record_id):
     )
 
 
-# ============================================================
-# UPDATE
-# ============================================================
+# ================= UPDATE =================
 
 @app.route(
     "/update/<int:record_id>",
@@ -519,49 +445,40 @@ def update_instrument(record_id):
         )
 
     certificate_id = request.form.get(
-        "certificate_id",
-        ""
+        "certificate_id", ""
     ).strip()
 
     instrument_name = request.form.get(
-        "instrument_name",
-        ""
+        "instrument_name", ""
     ).strip()
 
     owner_name = request.form.get(
-        "owner_name",
-        ""
+        "owner_name", ""
     ).strip()
 
     status = request.form.get(
-        "status",
-        ""
+        "status", ""
     ).strip()
 
     conn = get_db()
 
     try:
 
-        conn.execute(
-            """
+        conn.execute("""
             UPDATE instruments
-
             SET
                 certificate_id = ?,
                 instrument_name = ?,
                 owner_name = ?,
                 status = ?
-
             WHERE id = ?
-            """,
-            (
-                certificate_id,
-                instrument_name,
-                owner_name,
-                status,
-                record_id
-            )
-        )
+        """, (
+            certificate_id,
+            instrument_name,
+            owner_name,
+            status,
+            record_id
+        ))
 
         conn.commit()
 
@@ -583,9 +500,7 @@ def update_instrument(record_id):
     )
 
 
-# ============================================================
-# DELETE
-# ============================================================
+# ================= DELETE =================
 
 @app.route(
     "/delete/<int:record_id>",
@@ -616,21 +531,12 @@ def delete_instrument(record_id):
     )
 
 
-# ============================================================
-# RUN LOCAL SERVER
-# ============================================================
+# ================= START =================
 
 if __name__ == "__main__":
 
-    port = int(
-        os.environ.get(
-            "PORT",
-            5000
-        )
-    )
-
     app.run(
         host="0.0.0.0",
-        port=port,
+        port=int(os.environ.get("PORT", 5000)),
         debug=True
     )
